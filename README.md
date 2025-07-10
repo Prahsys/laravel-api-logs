@@ -4,7 +4,7 @@ A comprehensive Laravel package for logging API requests and responses with idem
 
 ## Features
 
-- **Idempotency Support**: Automatic idempotency key handling for API request deduplication
+- **Request Correlation**: Automatic correlation ID handling for API request tracking and audit trails
 - **Comprehensive Logging**: Logs API requests and responses with detailed metadata
 - **Data Redaction**: Configurable pipeline-based redaction for sensitive data (PCI, PII, HIPAA, etc.)
 - **Model Tracking**: Automatic association of created/updated models with API requests
@@ -14,17 +14,32 @@ A comprehensive Laravel package for logging API requests and responses with idem
 
 ## Architecture Overview
 
-The package follows a clean event-driven architecture:
+The package follows a clean event-driven architecture with a **lightweight database design**:
 
 ```
 HTTP Request → Middleware → Event → Listener → Pipeline → Log Channels
                     ↓
-              Model Tracking → Association → Database
+              Model Tracking → Association → Database (Lightweight References)
 ```
+
+### Design Philosophy
+
+**ApiLogItem** is designed as a **lightweight reference** to API requests, not a full data store. This approach:
+
+- **Keeps database lean**: Stores only essential metadata (correlation ID, path, method, timestamps, status)
+- **Enables long-term retention**: Default 365-day database retention for audit trails
+- **Separates concerns**: Heavy request/response data goes to log channels, references stay in database
+- **Maximizes flexibility**: Users can extend the model to store additional data if needed
+
+The actual request/response data is processed through configurable log channels where it can be:
+- Stored in log files with native Laravel rotation
+- Sent to external services (Axiom, Sentry, etc.) 
+- Redacted according to compliance requirements
+- Retained for different periods per channel
 
 ### Key Components
 
-1. **IdempotencyLogMiddleware**: Captures request/response data and manages idempotency keys
+1. **IdempotencyLogMiddleware**: Captures request/response data and manages correlation IDs
 2. **CompleteIdempotentRequestEvent**: Dispatched after request completion
 3. **CompleteIdempotentRequestListener**: Processes model associations and log data
 4. **ApiLogPipelineManager**: Registers Monolog processors for automatic redaction
@@ -50,8 +65,8 @@ php artisan migrate
 ### 2. Environment Configuration
 
 ```env
-# Idempotency Settings
-IDEMPOTENCY_TTL=86400
+# API Logs Settings  
+API_LOGS_TTL=86400
 
 # Logging Channels (configure in config/logging.php)
 API_LOGS_RAW_CHANNEL=api_logs_raw
@@ -121,7 +136,7 @@ protected $middlewareGroups = [
 
 ### Basic Usage
 
-Once configured, the package automatically logs API requests. Include an `Idempotency-Key` header in your requests:
+Once configured, the package automatically logs API requests. Include an `Idempotency-Key` header for request correlation:
 
 ```php
 $response = Http::withHeaders([
@@ -249,6 +264,55 @@ Examples:
 ]
 ```
 
+### Extending ApiLogItem for Custom Data Storage
+
+The default `ApiLogItem` stores lightweight references. You can extend it to store additional data:
+
+```php
+// Create custom model
+class CustomApiLogItem extends \Prahsys\ApiLogs\Models\ApiLogItem
+{
+    protected $fillable = [
+        // Default fields
+        'request_id', 'path', 'method', 'api_version', 
+        'request_at', 'response_at', 'response_status', 'is_error',
+        
+        // Custom fields
+        'request_payload', 'response_payload', 'user_id', 'client_ip'
+    ];
+    
+    protected $casts = [
+        // Default casts
+        'request_at' => 'datetime:Y-m-d H:i:s.v',
+        'response_at' => 'datetime:Y-m-d H:i:s.v',
+        'response_status' => 'integer',
+        'is_error' => 'boolean',
+        
+        // Custom casts
+        'request_payload' => 'json',
+        'response_payload' => 'json',
+    ];
+}
+
+// Create custom migration
+Schema::table('api_log_items', function (Blueprint $table) {
+    $table->json('request_payload')->nullable();
+    $table->json('response_payload')->nullable();
+    $table->string('user_id')->nullable();
+    $table->string('client_ip')->nullable();
+});
+
+// Update config
+'models' => [
+    'api_log_item' => \App\Models\CustomApiLogItem::class,
+],
+```
+
+**Alternative approaches:**
+- **External correlation**: Use correlation IDs to fetch full data from Axiom/Elasticsearch
+- **Hybrid storage**: Store critical fields in database, full payloads in object storage
+- **Event sourcing**: Store lightweight events, reconstruct full state when needed
+
 ### Custom Redactors
 
 Create custom redactors by implementing `RedactorInterface`:
@@ -281,11 +345,11 @@ class CustomRedactor implements RedactorInterface
 You can listen to `CompleteIdempotentRequestEvent` to add custom processing:
 
 ```php
-use Prahsys\ApiLogs\Events\CompleteIdempotentRequestEvent;
+use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
 
 // In your EventServiceProvider
 protected $listen = [
-    CompleteIdempotentRequestEvent::class => [
+    CompleteApiLogItemEvent::class => [
         YourCustomListener::class,
     ],
 ];
@@ -384,8 +448,63 @@ Configure different alert thresholds per channel:
 ],
 ```
 
+## Database Pruning and Log Management
+
+### Database Pruning
+
+ApiLogItems are designed for long-term retention (365 days by default) but can be pruned using Laravel's built-in model pruning:
+
+```bash
+# Run model pruning manually
+php artisan model:prune
+
+# Schedule in your app/Console/Kernel.php
+protected function schedule(Schedule $schedule)
+{
+    $schedule->command('model:prune')->daily();
+}
+```
+
+Configure retention in your environment:
+```env
+# Retain database references for 1 year (default)
+API_LOGS_TTL_HOURS=8760
+
+# Or configure in config file
+'database' => [
+    'pruning' => [
+        'ttl_hours' => 24 * 365, // 365 days
+    ],
+],
+```
+
+### Log File Management
+
+**Separate from database retention**, configure log rotation per channel:
+
+```php
+// config/logging.php
+'api_logs_raw' => [
+    'driver' => 'daily',
+    'path' => storage_path('logs/api_logs_raw.log'),
+    'days' => 14, // Rotate log files every 14 days
+],
+
+'api_logs_redacted' => [
+    'driver' => 'daily', 
+    'days' => 90, // Keep redacted logs longer for analytics
+],
+```
+
+**Best practices:**
+- **Database**: Long retention (365+ days) for audit trails and correlation
+- **Raw logs**: Short retention (7-30 days) for debugging, restricted access
+- **Redacted logs**: Medium retention (30-90 days) for monitoring and analytics
+- **External services**: Per-service retention policies (Sentry 30 days, Axiom 1 year, etc.)
+
 ## Performance Considerations
 
+- **Lightweight database**: Only essential metadata stored in database
 - **Async Processing**: Heavy processing is handled by queued event listeners
 - **Configurable Logging**: Exclude paths and request types to reduce overhead
 - **Efficient Model Tracking**: In-memory tracking during request lifecycle

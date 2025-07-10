@@ -4,11 +4,12 @@ namespace Prahsys\ApiLogs\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
-class IdempotentRequest extends Model
+class ApiLogItem extends Model
 {
-    use HasUuids;
+    use HasUuids, MassPrunable;
 
     /**
      * The attributes that are mass assignable.
@@ -43,7 +44,7 @@ class IdempotentRequest extends Model
      */
     public function getRelatedModels(string $modelClass): MorphToMany
     {
-        return $this->morphedByMany($modelClass, 'model', 'idempotent_request_models');
+        return $this->morphedByMany($modelClass, 'model', 'api_log_item_models');
     }
 
     /**
@@ -74,5 +75,15 @@ class IdempotentRequest extends Model
         }
 
         return round($duration / 1000, 2).'s';
+    }
+
+    /**
+     * Get the prunable model query.
+     */
+    public function prunable()
+    {
+        $ttlHours = config('prahsys-api-logs.database.pruning.ttl_hours', 24 * 365); // Default 365 days
+        
+        return static::where('created_at', '<=', now()->subHours($ttlHours));
     }
 }

@@ -2,13 +2,13 @@
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
-use Prahsys\ApiLogs\Models\IdempotentRequest;
-use Prahsys\ApiLogs\Services\IdempotencyService;
+use Prahsys\ApiLogs\Models\ApiLogItem;
+use Prahsys\ApiLogs\Services\ApiLogItemService;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->service = new IdempotencyService;
+    $this->service = new ApiLogItemService;
     $this->requestId = (string) Str::uuid();
 });
 
@@ -26,10 +26,10 @@ test('it can create idempotent request record', function () {
     ];
 
     // Store the idempotent request
-    $idempotentRequest = $this->service->storeIdempotentRequest($logData);
+    $idempotentRequest = $this->service->storeApiLogItem($logData);
 
     // Assert that the record was created
-    expect($idempotentRequest)->toBeInstanceOf(IdempotentRequest::class)
+    expect($idempotentRequest)->toBeInstanceOf(ApiLogItem::class)
         ->and($idempotentRequest->request_id)->toBe($this->requestId)
         ->and($idempotentRequest->path)->toBe('api/test')
         ->and($idempotentRequest->method)->toBe('POST')
@@ -38,7 +38,7 @@ test('it can create idempotent request record', function () {
         ->and($idempotentRequest->is_error)->toBeFalse();
 
     // Test retrieving the record
-    $retrieved = IdempotentRequest::where('request_id', $this->requestId)->first();
+    $retrieved = ApiLogItem::where('request_id', $this->requestId)->first();
     expect($retrieved)->not->toBeNull()
         ->and($retrieved->id)->toBe($idempotentRequest->id);
 });

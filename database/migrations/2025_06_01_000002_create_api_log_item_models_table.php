@@ -11,19 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('idempotent_request_models', function (Blueprint $table) {
+        Schema::create('api_log_item_models', function (Blueprint $table) {
             $table->id();
-            $table->uuid('idempotent_request_id');
+            $table->uuid('api_log_item_id');
             $table->uuidMorphs('model');
             $table->timestamps();
 
-            $table->foreign('idempotent_request_id')
+            $table->foreign('api_log_item_id')
                 ->references('id')
-                ->on('idempotent_requests')
+                ->on('api_log_items')
                 ->cascadeOnDelete();
 
             // Unique constraint to prevent duplicate associations
-            $table->unique(['idempotent_request_id', 'model_type', 'model_id'], 'unique_idempotent_request_model');
+            $table->unique(['api_log_item_id', 'model_type', 'model_id'], 'unique_api_log_item_model');
         });
     }
 
@@ -32,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('idempotent_request_models');
+        Schema::dropIfExists('api_log_item_models');
     }
 };

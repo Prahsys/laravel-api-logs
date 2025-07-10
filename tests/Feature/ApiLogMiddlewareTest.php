@@ -6,15 +6,15 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
-use Prahsys\ApiLogs\Events\CompleteIdempotentRequestEvent;
-use Prahsys\ApiLogs\Http\Middleware\IdempotencyLogMiddleware;
-use Prahsys\ApiLogs\Models\IdempotentRequest;
+use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
+use Prahsys\ApiLogs\Http\Middleware\ApiLogMiddleware;
+use Prahsys\ApiLogs\Models\ApiLogItem;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Event::fake();
-    $this->middleware = app(IdempotencyLogMiddleware::class);
+    $this->middleware = app(ApiLogMiddleware::class);
     $this->idempotencyKey = (string) Str::uuid();
 });
 
@@ -62,20 +62,20 @@ test('middleware handles request and logs data correctly', function () {
         ->and($apiLogData->response)->toHaveKey('timestamp');
 
     // Check that the event was fired with the ApiLogData
-    Event::assertDispatched(CompleteIdempotentRequestEvent::class, function ($event) {
+    Event::assertDispatched(CompleteApiLogItemEvent::class, function ($event) {
         return $event->requestId === $this->idempotencyKey
             && $event->apiLogData instanceof ApiLogData
             && $event->apiLogData->id === $this->idempotencyKey;
     });
 
     // Check that the idempotent request was stored in the database
-    $idempotentRequest = IdempotentRequest::where('request_id', $this->idempotencyKey)->first();
-    expect($idempotentRequest)->not->toBeNull()
-        ->and($idempotentRequest->path)->toBe('/api/test')
-        ->and($idempotentRequest->method)->toBe('POST')
-        ->and($idempotentRequest->api_version)->toBe('2.0')
-        ->and($idempotentRequest->response_status)->toBe(200)
-        ->and($idempotentRequest->is_error)->toBeFalse();
+    $apiLogItem = ApiLogItem::where('request_id', $this->idempotencyKey)->first();
+    expect($apiLogItem)->not->toBeNull()
+        ->and($apiLogItem->path)->toBe('/api/test')
+        ->and($apiLogItem->method)->toBe('POST')
+        ->and($apiLogItem->api_version)->toBe('2.0')
+        ->and($apiLogItem->response_status)->toBe(200)
+        ->and($apiLogItem->is_error)->toBeFalse();
 });
 
 test('middleware skips logging for excluded paths', function () {
@@ -104,11 +104,11 @@ test('middleware skips logging for excluded paths', function () {
     $this->middleware->terminate($request, $response);
 
     // Check that no event was fired for excluded paths
-    Event::assertNotDispatched(CompleteIdempotentRequestEvent::class);
+    Event::assertNotDispatched(CompleteApiLogItemEvent::class);
 
     // Check that no idempotent request was stored
-    $idempotentRequest = IdempotentRequest::where('request_id', $this->idempotencyKey)->first();
-    expect($idempotentRequest)->toBeNull();
+    $apiLogItem = ApiLogItem::where('request_id', $this->idempotencyKey)->first();
+    expect($apiLogItem)->toBeNull();
 });
 
 test('middleware handles error responses correctly', function () {
@@ -135,15 +135,15 @@ test('middleware handles error responses correctly', function () {
     $this->middleware->terminate($request, $response);
 
     // Check that the event was fired with error response data
-    Event::assertDispatched(CompleteIdempotentRequestEvent::class, function ($event) {
+    Event::assertDispatched(CompleteApiLogItemEvent::class, function ($event) {
         return $event->requestId === $this->idempotencyKey
             && $event->apiLogData->statusCode === 422
             && $event->apiLogData->success === false;
     });
 
     // Check that the idempotent request was stored with error status
-    $idempotentRequest = IdempotentRequest::where('request_id', $this->idempotencyKey)->first();
-    expect($idempotentRequest)->not->toBeNull()
-        ->and($idempotentRequest->response_status)->toBe(422)
-        ->and($idempotentRequest->is_error)->toBeTrue();
+    $apiLogItem = ApiLogItem::where('request_id', $this->idempotencyKey)->first();
+    expect($apiLogItem)->not->toBeNull()
+        ->and($apiLogItem->response_status)->toBe(422)
+        ->and($apiLogItem->is_error)->toBeTrue();
 });

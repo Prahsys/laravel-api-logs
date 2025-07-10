@@ -5,16 +5,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Idempotency Settings
+    | Request Correlation Settings
     |--------------------------------------------------------------------------
     |
-    | Configure how idempotency keys are handled and how long they are valid for.
+    | Configure request correlation/tracking for audit trails and model association.
+    | Note: This provides request correlation, not true idempotency (duplicate prevention).
     |
     */
-    'idempotency' => [
-        'header_name' => 'Idempotency-Key',
-        'ttl' => env('IDEMPOTENCY_TTL', 86400), // 24 hours in seconds
-        'cache_prefix' => 'idempotency:',
+    'correlation' => [
+        'header_name' => 'Idempotency-Key', // Header name for request correlation ID
+        'ensure_header' => true, // Auto-generate header if missing, or skip logging if false
     ],
 
     /*
@@ -43,11 +43,14 @@ return [
     | Database Settings
     |--------------------------------------------------------------------------
     |
-    | Configure database connection for API log storage.
+    | Configure database connection and pruning for API log storage.
     |
     */
     'database' => [
         'connection' => env('DB_CONNECTION', 'mysql'),
+        'pruning' => [
+            'ttl_hours' => env('API_LOGS_TTL_HOURS', 24 * 365), // Default 365 days
+        ],
     ],
 
     /*
@@ -57,6 +60,7 @@ return [
     |
     | Configure the data classes to be used by the package.
     | You can override these to use your own custom implementations.
+    | Must be an extension of \Prahsys\ApiLogs\Data\ApiLogData.
     |
     */
     'data' => [
@@ -73,6 +77,6 @@ return [
     |
     */
     'models' => [
-        'idempotent_request' => \Prahsys\ApiLogs\Models\IdempotentRequest::class,
+        'api_log_item' => \Prahsys\ApiLogs\Models\ApiLogItem::class,
     ],
 ];

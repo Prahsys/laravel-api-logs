@@ -5,10 +5,10 @@ namespace Prahsys\ApiLogs;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Prahsys\ApiLogs\Data\ApiLogData;
-use Prahsys\ApiLogs\Events\CompleteIdempotentRequestEvent;
-use Prahsys\ApiLogs\Http\Middleware\IdempotencyLogMiddleware;
-use Prahsys\ApiLogs\Listeners\CompleteIdempotentRequestListener;
-use Prahsys\ApiLogs\Services\ModelIdempotencyTracker;
+use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
+use Prahsys\ApiLogs\Http\Middleware\ApiLogMiddleware;
+use Prahsys\ApiLogs\Listeners\CompleteApiLogItemListener;
+use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 
 class ApiLogsServiceProvider extends ServiceProvider
 {
@@ -32,8 +32,8 @@ class ApiLogsServiceProvider extends ServiceProvider
 
         // Register event listeners
         Event::listen(
-            CompleteIdempotentRequestEvent::class,
-            CompleteIdempotentRequestListener::class
+            CompleteApiLogItemEvent::class,
+            CompleteApiLogItemListener::class
         );
     }
 
@@ -48,12 +48,12 @@ class ApiLogsServiceProvider extends ServiceProvider
         );
 
         // Register the middleware
-        $this->app->singleton(IdempotencyLogMiddleware::class);
+        $this->app->singleton(ApiLogMiddleware::class);
 
         // Jobs are now handled by event listeners
 
         // Register services
-        $this->app->singleton(ModelIdempotencyTracker::class);
+        $this->app->singleton(ApiLogItemTracker::class);
 
         // Register the configured ApiLogData class
         $dataClass = config('prahsys-api-logs.data.api_log_data', ApiLogData::class);
@@ -73,7 +73,5 @@ class ApiLogsServiceProvider extends ServiceProvider
             return $manager;
         });
 
-        // Register the IdempotencyServiceProvider
-        $this->app->register(IdempotencyServiceProvider::class);
     }
 }

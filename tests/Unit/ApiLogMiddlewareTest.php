@@ -5,14 +5,14 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
-use Prahsys\ApiLogs\Events\CompleteIdempotentRequestEvent;
-use Prahsys\ApiLogs\Http\Middleware\IdempotencyLogMiddleware;
-use Prahsys\ApiLogs\Services\IdempotencyService;
-use Prahsys\ApiLogs\Services\ModelIdempotencyTracker;
+use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
+use Prahsys\ApiLogs\Http\Middleware\ApiLogMiddleware;
+use Prahsys\ApiLogs\Services\ApiLogItemService;
+use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 
 beforeEach(function () {
-    $this->idempotencyService = Mockery::mock(IdempotencyService::class);
-    $this->middleware = new IdempotencyLogMiddleware(
+    $this->idempotencyService = Mockery::mock(ApiLogItemService::class);
+    $this->middleware = new ApiLogMiddleware(
         $this->idempotencyService
     );
     $this->requestId = (string) Str::uuid();
@@ -235,7 +235,7 @@ test('fireCompleteEvent fires event with tracked models and ApiLogData', functio
     $mockIdempotentRequest->id = 'idempotent-request-id';
 
     // Mock the ModelIdempotencyTracker
-    $mockTracker = Mockery::mock(ModelIdempotencyTracker::class);
+    $mockTracker = Mockery::mock(ApiLogItemTracker::class);
     $mockModels = collect([
         ['model_class' => 'App\Models\User', 'model_id' => 1],
         ['model_class' => 'App\Models\Order', 'model_id' => 2],
@@ -251,7 +251,7 @@ test('fireCompleteEvent fires event with tracked models and ApiLogData', functio
         ->with($this->requestId);
 
     // Mock the app() call to return our mock tracker
-    $this->app->instance(ModelIdempotencyTracker::class, $mockTracker);
+    $this->app->instance(ApiLogItemTracker::class, $mockTracker);
 
     // Use reflection to access protected method
     $reflection = new ReflectionClass($this->middleware);
@@ -261,9 +261,9 @@ test('fireCompleteEvent fires event with tracked models and ApiLogData', functio
     $method->invoke($this->middleware, $apiLogData, $mockIdempotentRequest);
 
     // Assert the event was fired with correct parameters
-    Event::assertDispatched(CompleteIdempotentRequestEvent::class, function ($event) use ($apiLogData) {
+    Event::assertDispatched(CompleteApiLogItemEvent::class, function ($event) use ($apiLogData) {
         return $event->requestId === $this->requestId
-            && $event->idempotentRequestId === 'idempotent-request-id'
+            && $event->apiLogItemId === 'idempotent-request-id'
             && count($event->models) === 2
             && $event->apiLogData === $apiLogData;
     });
@@ -282,5 +282,5 @@ test('fireCompleteEvent does not fire when no idempotent request', function () {
     $method->invoke($this->middleware, $apiLogData, null);
 
     // Assert no event was fired
-    Event::assertNotDispatched(CompleteIdempotentRequestEvent::class);
+    Event::assertNotDispatched(CompleteApiLogItemEvent::class);
 });

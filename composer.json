@@ -24,7 +24,6 @@
         "illuminate/database": "^10.0|^11.0|^12.0",
         "illuminate/http": "^10.0|^11.0|^12.0",
         "illuminate/queue": "^10.0|^11.0|^12.0",
-        "infinitypaul/idempotency-laravel": "^1.0",
         "spatie/laravel-data": "^3.0|^4.0"
     },
     "require-dev": {
