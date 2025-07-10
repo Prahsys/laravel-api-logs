@@ -67,6 +67,9 @@ class ApiLogsServiceProvider extends ServiceProvider
             $channels = $app['config']->get('prahsys-api-logs.channels', []);
             $manager->loadChannels($channels);
 
+            // Register processors on log channels
+            $manager->registerProcessors();
+
             return $manager;
         });
 

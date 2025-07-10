@@ -77,7 +77,7 @@ class IdempotencyLogMiddleware
     protected function startApiLogData(Request $request, string $requestId): ApiLogData
     {
         $requestData = [
-            'headers' => $request->headers->all(),
+            'headers' => array_map(fn ($values) => implode(PHP_EOL, $values), $request->headers->all()),
             'body' => $request->all() ?: [],
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
@@ -106,7 +106,7 @@ class IdempotencyLogMiddleware
         $apiLogData->statusCode = $response->getStatusCode();
         $apiLogData->success = $response->getStatusCode() < 400;
         $apiLogData->response = [
-            'headers' => $response->headers->all(),
+            'headers' => array_map(fn ($values) => implode(PHP_EOL, $values), $response->headers->all()),
             'body' => $this->getResponseBody($response),
             'timestamp' => now()->toIso8601String(),
         ];
@@ -170,6 +170,11 @@ class IdempotencyLogMiddleware
      */
     protected function shouldLogRequest(Request $request): bool
     {
+        // Check if API logging is enabled
+        if (! config('prahsys-api-logs.enabled', true)) {
+            return false;
+        }
+
         // Skip options requests (CORS preflight)
         if ($request->method() === 'OPTIONS') {
             return false;

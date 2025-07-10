@@ -38,6 +38,9 @@ class PciRedactor extends DotNotationRedactor
             'payment.*.cvv',
             'cards.*.number',
             'cards.*.cvv',
+            '**.card.number',
+            '**.card.cvv',
+            '**.card.expiry',
         ];
 
         parent::__construct(

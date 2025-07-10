@@ -27,9 +27,10 @@ HTTP Request → Middleware → Event → Listener → Pipeline → Log Channels
 1. **IdempotencyLogMiddleware**: Captures request/response data and manages idempotency keys
 2. **CompleteIdempotentRequestEvent**: Dispatched after request completion
 3. **CompleteIdempotentRequestListener**: Processes model associations and log data
-4. **ApiLogPipelineManager**: Orchestrates data processing through redaction pipelines
-5. **ModelIdempotencyTracker**: Tracks models during request processing
-6. **Redaction System**: Pipeline-based data redaction with configurable redactors
+4. **ApiLogPipelineManager**: Registers Monolog processors for automatic redaction
+5. **ApiLogProcessor**: Monolog processor that applies redaction pipelines to log records
+6. **ModelIdempotencyTracker**: Tracks models during request processing
+7. **Redaction System**: Pipeline-based data redaction with configurable redactors
 
 ## Installation
 
@@ -210,10 +211,43 @@ Configure different redaction pipelines for different channels in `config/prahsy
 
 - `CommonHeaderFields`: Redacts authentication headers
 - `CommonBodyFields`: Redacts password fields
-- `DotNotationRedactor`: Redacts fields using dot notation
+- `DotNotationRedactor`: Redacts fields using dot notation (supports `*` and `**` wildcards)
 - `PiiRedactor`: Redacts personally identifiable information
 - `HipaaRedactor`: Redacts HIPAA-protected health information
 - `PciRedactor`: Redacts PCI DSS sensitive payment data
+
+### Wildcard Pattern Support
+
+The `DotNotationRedactor` supports powerful wildcard patterns:
+
+- **Single wildcard (`*`)**: Matches one level
+  ```php
+  'users.*.email' // Matches users.1.email, users.john.email, etc.
+  ```
+
+- **Deep wildcard (`**`)**: Matches any level of nesting
+  ```php
+  '**.card.number' // Matches card.number anywhere in the data structure
+  '**.password'    // Matches password fields at any depth
+  ```
+
+Examples:
+```php
+// Traditional specific paths
+\Prahsys\ApiLogs\Redactors\DotNotationRedactor::class => [
+    'paths' => ['request.body.users.0.password', 'request.body.users.1.password'],
+]
+
+// Using single wildcards  
+\Prahsys\ApiLogs\Redactors\DotNotationRedactor::class => [
+    'paths' => ['request.body.users.*.password'],
+]
+
+// Using deep wildcards for complex nested data
+\Prahsys\ApiLogs\Redactors\DotNotationRedactor::class => [
+    'paths' => ['**.password', '**.card.number', '**.ssn'],
+]
+```
 
 ### Custom Redactors
 

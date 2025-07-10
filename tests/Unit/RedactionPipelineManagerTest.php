@@ -2,6 +2,7 @@
 
 use Illuminate\Container\Container;
 use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Facades\Log;
 use Prahsys\ApiLogs\ApiLogPipelineManager;
 use Prahsys\ApiLogs\Redactors\DotNotationRedactor;
 
@@ -44,22 +45,25 @@ it('adds single channel', function () {
     expect($channels['test_channel'])->toBe([[DotNotationRedactor::class, ['test.path']]]);
 });
 
-it('resolves array redactor config', function () {
+it('registers processors when configured', function () {
     $manager = app(ApiLogPipelineManager::class);
 
-    // Use reflection to test the protected method
-    $reflection = new ReflectionClass($manager);
-    $method = $reflection->getMethod('resolveRedactors');
-    $method->setAccessible(true);
+    // Mock the log channel and logger
+    $mockLogger = Mockery::mock('Psr\\Log\\LoggerInterface');
+    $mockLogger->shouldReceive('pushProcessor')->once();
 
-    $config = [
-        [DotNotationRedactor::class, ['request.body.password'], '[REDACTED]'],
-    ];
+    $mockChannel = Mockery::mock();
+    $mockChannel->shouldReceive('getLogger')->andReturn($mockLogger);
 
-    $redactors = $method->invoke($manager, $config);
+    Log::shouldReceive('channel')
+        ->with('test_channel')
+        ->andReturn($mockChannel);
 
-    expect($redactors)->toHaveCount(1);
-    expect($redactors[0])->toBeInstanceOf(DotNotationRedactor::class);
+    $manager->addChannel('test_channel', [[DotNotationRedactor::class, ['test.path']]]);
+    $manager->registerProcessors();
+
+    // Test passes if no exceptions are thrown
+    expect(true)->toBeTrue();
 });
 
 it('clears channels', function () {
