@@ -14,7 +14,7 @@ class ApiLogItemService
     public function storeApiLogItem(array $logData)
     {
         // Get the model class from config
-        $apiLogItemClass = config('prahsys-api-logs.models.api_log_item');
+        $apiLogItemClass = config('api-logs.models.api_log_item');
 
         // Check if a record already exists
         $existingRecord = $apiLogItemClass::where('request_id', $logData['request_id'])->first();

@@ -160,7 +160,7 @@ test('shouldLogRequest returns false for OPTIONS requests', function () {
 });
 
 test('shouldLogRequest returns false for excluded paths', function () {
-    config(['prahsys-api-logs.exclude_paths' => ['api/docs', 'api/health']]);
+    config(['api-logs.exclude_paths' => ['api/docs', 'api/health']]);
 
     $request = Request::create('/api/docs', 'GET');
 
@@ -187,7 +187,7 @@ test('shouldLogRequest returns true for valid requests', function () {
     expect($shouldLog)->toBeTrue();
 });
 
-test('storeIdempotentRequest creates database record correctly', function () {
+test('storeApiLog creates database record correctly', function () {
     $apiLogData = ApiLogData::instance([
         'id' => $this->requestId,
         'operationName' => 'test.create',
@@ -211,14 +211,14 @@ test('storeIdempotentRequest creates database record correctly', function () {
     ];
 
     $mockIdempotentRequest = Mockery::mock();
-    $this->idempotencyService->shouldReceive('storeIdempotentRequest')
+    $this->idempotencyService->shouldReceive('storeApiLogItem')
         ->once()
         ->with($expectedLogData)
         ->andReturn($mockIdempotentRequest);
 
     // Use reflection to access protected method
     $reflection = new ReflectionClass($this->middleware);
-    $method = $reflection->getMethod('storeIdempotentRequest');
+    $method = $reflection->getMethod('storeApiLog');
     $method->setAccessible(true);
 
     $result = $method->invoke($this->middleware, $apiLogData);

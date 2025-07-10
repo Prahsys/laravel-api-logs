@@ -19,6 +19,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Outbound API Logging Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configure logging for outbound HTTP requests made via Guzzle/PSR clients.
+    | This captures API calls your application makes to external services.
+    |
+    */
+    'outbound' => [
+        'enabled' => env('API_LOGS_OUTBOUND_ENABLED', true),
+        'exclude_hosts' => [
+            // Hosts to exclude from outbound logging (supports wildcards)
+            // 'localhost',
+            // '*.internal.company.com',
+            // 'monitoring.example.com',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Path Exclusions
+    |--------------------------------------------------------------------------
+    |
+    | Configure paths that should be excluded from API logging.
+    |
+    */
+    'exclude_paths' => [
+        // Paths to exclude from logging (supports wildcards)
+        // 'health-check',
+        // 'api/internal/*',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Api Log Channels
     |--------------------------------------------------------------------------
     |
@@ -33,8 +66,8 @@ return [
         'api_logs_raw' => [],
 
         'api_logs_redacted' => [
-            \Prahsys\ApiLogs\Redactors\CommonHeaderFields::class,
-            \Prahsys\ApiLogs\Redactors\CommonBodyFields::class,
+            \Prahsys\ApiLogs\Redactors\CommonHeaderFieldsRedactor::class,
+            \Prahsys\ApiLogs\Redactors\CommonBodyFieldsRedactor::class,
         ],
     ],
 

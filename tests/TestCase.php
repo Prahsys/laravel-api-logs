@@ -40,9 +40,14 @@ class TestCase extends Orchestra
         $app['config']->set('data.max_transformation_depth', 512);
         $app['config']->set('data.throw_when_max_transformation_depth_reached', true);
 
-        // Configure the logging channels
-        $app['config']->set('prahsys-api-logs.logging.raw_channel', 'test_raw');
-        $app['config']->set('prahsys-api-logs.logging.redacted_channel', 'test_redacted');
+        // Configure the API logs channels
+        $app['config']->set('api-logs.channels', [
+            'test_raw' => [],
+            'test_redacted' => [
+                \Prahsys\ApiLogs\Redactors\CommonHeaderFieldsRedactor::class,
+                \Prahsys\ApiLogs\Redactors\CommonBodyFieldsRedactor::class,
+            ],
+        ]);
 
         // Configure log channels for testing
         $app['config']->set('logging.channels.test_raw', [

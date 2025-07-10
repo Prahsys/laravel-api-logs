@@ -17,7 +17,7 @@ trait HasApiLogItems
     {
         // Register saved event to track models for association with API log items
         static::saved(function ($model) {
-            $model->registerWithIdempotencyTracker();
+            $model->registerWithApiLogItemTracker();
         });
     }
 
@@ -26,7 +26,7 @@ trait HasApiLogItems
      */
     public function apiLogItems(): MorphToMany
     {
-        $apiLogItemModel = config('prahsys-api-logs.models.api_log_item', ApiLogItem::class);
+        $apiLogItemModel = config('api-logs.models.api_log_item', ApiLogItem::class);
 
         return $this->morphToMany(
             $apiLogItemModel,
@@ -49,7 +49,7 @@ trait HasApiLogItems
      * Register this model with the ModelIdempotencyTracker service
      * This is called when the model is saved
      */
-    protected function registerWithIdempotencyTracker(): void
+    protected function registerWithApiLogItemTracker(): void
     {
         $request = request();
 
@@ -60,7 +60,7 @@ trait HasApiLogItems
 
         // Check if a correlation key is present
         $correlationKey = $request->header(
-            config('prahsys-api-logs.correlation.header_name', 'Idempotency-Key')
+            config('api-logs.correlation.header_name', 'Idempotency-Key')
         );
 
         if (! $correlationKey) {

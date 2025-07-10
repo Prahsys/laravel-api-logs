@@ -87,11 +87,31 @@ database/migrations/
 
 **Final Test Results:** 38 tests passing (121 assertions) - 100% success rate!
 
-### Future Enhancements (Next Session)
-- [ ] Create Guzzle/PSR middleware for outbound API calls
-- [ ] Add configuration for outbound API logging  
-- [ ] Document Guzzle middleware integration examples
+### ✅ Guzzle Middleware Implementation Complete!
+- [x] Create Guzzle/PSR middleware for outbound API calls
+- [x] Add configuration for outbound API logging  
+- [x] Document Guzzle middleware integration examples
+- [x] Add comprehensive test coverage (8 new tests)
+- [x] Create helper class for easy integration
+- [x] Support for PSR-7 request/response handling
+- [x] Host exclusion and request-level skip options
+- [x] Correlation ID propagation to external APIs
+
+**Final Test Results:** 46 tests passing (146 assertions) - 100% success rate!
+
+### Guzzle Middleware Features
+- **Easy Integration**: `GuzzleApiLogHelper::createClient()` for instant setup
+- **Flexible Configuration**: Host exclusions, per-request skipping, custom correlation IDs
+- **Full PSR-7 Support**: Works with any PSR-7 compliant HTTP client
+- **Error Handling**: Gracefully handles both successful and failed requests
+- **Metadata Enrichment**: Marks outbound calls with `type: 'outbound'` and `client: 'guzzle'`
+- **Same Event System**: Uses existing `CompleteApiLogItemEvent` for consistency
+
+### Future Enhancements Ideas
 - [ ] Consider adding more specific event types for different API call types
+- [ ] Add support for other HTTP clients (Symfony HttpClient, etc.)
+- [ ] Implement request retry correlation tracking
+- [ ] Add performance metrics (response time analysis)
 
 ### Extension Examples Added
 - Custom model extension with JSON columns

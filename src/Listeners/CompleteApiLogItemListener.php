@@ -17,7 +17,7 @@ class CompleteApiLogItemListener implements ShouldQueue
      */
     public function handle(CompleteApiLogItemEvent $event): void
     {
-        $apiLogItemClass = config('prahsys-api-logs.models.api_log_item');
+        $apiLogItemClass = config('api-logs.models.api_log_item');
 
         // Find the API log item record by its ID (not request_id)
         $apiLogItem = $apiLogItemClass::find($event->apiLogItemId);

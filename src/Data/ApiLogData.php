@@ -23,7 +23,7 @@ class ApiLogData extends Data
      */
     public static function instance(array $data = []): static
     {
-        $dataClass = config('prahsys-api-logs.data.api_log_data', static::class);
+        $dataClass = config('api-logs.data.api_log_data', static::class);
 
         if (! empty($data)) {
             return $dataClass::from($data);

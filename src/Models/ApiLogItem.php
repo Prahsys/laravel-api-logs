@@ -3,8 +3,8 @@
 namespace Prahsys\ApiLogs\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\MassPrunable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class ApiLogItem extends Model
@@ -82,8 +82,8 @@ class ApiLogItem extends Model
      */
     public function prunable()
     {
-        $ttlHours = config('prahsys-api-logs.database.pruning.ttl_hours', 24 * 365); // Default 365 days
-        
+        $ttlHours = config('api-logs.database.pruning.ttl_hours', 24 * 365); // Default 365 days
+
         return static::where('created_at', '<=', now()->subHours($ttlHours));
     }
 }

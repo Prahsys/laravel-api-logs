@@ -80,7 +80,7 @@ test('middleware handles request and logs data correctly', function () {
 
 test('middleware skips logging for excluded paths', function () {
     // Configure excluded paths
-    config(['prahsys-api-logs.exclude_paths' => ['api/docs', 'api/health']]);
+    config(['api-logs.exclude_paths' => ['api/docs', 'api/health']]);
 
     // Create a mock request to an excluded path
     $request = Request::create('/api/docs', 'GET');

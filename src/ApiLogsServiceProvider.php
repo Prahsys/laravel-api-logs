@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Prahsys\ApiLogs\Data\ApiLogData;
 use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
 use Prahsys\ApiLogs\Http\Middleware\ApiLogMiddleware;
+use Prahsys\ApiLogs\Http\Middleware\GuzzleApiLogMiddleware;
 use Prahsys\ApiLogs\Listeners\CompleteApiLogItemListener;
 use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 
@@ -19,7 +20,7 @@ class ApiLogsServiceProvider extends ServiceProvider
     {
         // Publish configuration
         $this->publishes([
-            __DIR__.'/../config/prahsys-api-logs.php' => config_path('prahsys-api-logs.php'),
+            __DIR__.'/../config/api-logs.php' => config_path('api-logs.php'),
         ], 'config');
 
         // Publish migrations
@@ -44,11 +45,14 @@ class ApiLogsServiceProvider extends ServiceProvider
     {
         // Merge config
         $this->mergeConfigFrom(
-            __DIR__.'/../config/prahsys-api-logs.php', 'prahsys-api-logs'
+            __DIR__.'/../config/api-logs.php', 'api-logs'
         );
 
         // Register the middleware
         $this->app->singleton(ApiLogMiddleware::class);
+
+        // Register Guzzle middleware (not singleton - multiple outbound calls possible)
+        $this->app->bind(GuzzleApiLogMiddleware::class);
 
         // Jobs are now handled by event listeners
 
@@ -56,7 +60,7 @@ class ApiLogsServiceProvider extends ServiceProvider
         $this->app->singleton(ApiLogItemTracker::class);
 
         // Register the configured ApiLogData class
-        $dataClass = config('prahsys-api-logs.data.api_log_data', ApiLogData::class);
+        $dataClass = config('api-logs.data.api_log_data', ApiLogData::class);
         $this->app->singleton($dataClass);
 
         // Register ApiLogPipelineManager as singleton and configure it
@@ -64,7 +68,7 @@ class ApiLogsServiceProvider extends ServiceProvider
             $manager = new ApiLogPipelineManager;
 
             // Load channels from config
-            $channels = $app['config']->get('prahsys-api-logs.channels', []);
+            $channels = $app['config']->get('api-logs.channels', []);
             $manager->loadChannels($channels);
 
             // Register processors on log channels

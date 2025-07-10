@@ -33,8 +33,8 @@ class ApiLogMiddleware
         }
 
         // Generate or use existing correlation ID
-        $correlationHeaderName = config('prahsys-api-logs.correlation.header_name', 'Idempotency-Key');
-        $ensureHeader = config('prahsys-api-logs.correlation.ensure_header', true);
+        $correlationHeaderName = config('api-logs.correlation.header_name', 'Idempotency-Key');
+        $ensureHeader = config('api-logs.correlation.ensure_header', true);
         $requestId = $request->header($correlationHeaderName);
 
         // If header is missing and ensure_header is false, skip logging
@@ -183,7 +183,7 @@ class ApiLogMiddleware
     protected function shouldLogRequest(Request $request): bool
     {
         // Check if API logging is enabled
-        if (! config('prahsys-api-logs.enabled', true)) {
+        if (! config('api-logs.enabled', true)) {
             return false;
         }
 
@@ -193,7 +193,7 @@ class ApiLogMiddleware
         }
 
         // Check if the path should be excluded
-        $excludePaths = config('prahsys-api-logs.exclude_paths', []);
+        $excludePaths = config('api-logs.exclude_paths', []);
         $path = $request->path();
 
         foreach ($excludePaths as $excludePath) {
