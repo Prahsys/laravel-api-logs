@@ -2,7 +2,7 @@
 
 namespace Prahsys\ApiLogs\Redactors;
 
-class CommonBodyFields extends DotNotationRedactor
+class CommonBodyFieldsRedactor extends DotNotationRedactor
 {
     public function __construct(array $additionalPaths = [], string|\Closure $replacement = '[REDACTED]')
     {

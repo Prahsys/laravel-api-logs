@@ -4,20 +4,20 @@ namespace Prahsys\ApiLogs\Services;
 
 use Carbon\Carbon;
 
-class IdempotencyService
+class ApiLogItemService
 {
     /**
-     * Store an idempotent request record in the database.
+     * Store an API log item record in the database.
      *
-     * @return mixed The created or updated IdempotentRequest model
+     * @return mixed The created or updated ApiLogItem model
      */
-    public function storeIdempotentRequest(array $logData)
+    public function storeApiLogItem(array $logData)
     {
         // Get the model class from config
-        $idempotentRequestClass = config('prahsys-api-logs.models.idempotent_request');
+        $apiLogItemClass = config('api-logs.models.api_log_item');
 
         // Check if a record already exists
-        $existingRecord = $idempotentRequestClass::where('request_id', $logData['request_id'])->first();
+        $existingRecord = $apiLogItemClass::where('request_id', $logData['request_id'])->first();
 
         if ($existingRecord) {
             // Update the existing record with response data if not already set
@@ -33,7 +33,7 @@ class IdempotencyService
         }
 
         // Create a new record
-        return $idempotentRequestClass::create([
+        return $apiLogItemClass::create([
             'request_id' => $logData['request_id'],
             'path' => $logData['path'],
             'method' => $logData['method'],

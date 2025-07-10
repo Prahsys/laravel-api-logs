@@ -3,7 +3,7 @@
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
-use Prahsys\ApiLogs\Models\IdempotentRequest;
+use Prahsys\ApiLogs\Models\ApiLogItem;
 
 uses(RefreshDatabase::class);
 
@@ -16,15 +16,15 @@ test('it can calculate duration in milliseconds', function () {
     $requestTime = Carbon::now();
     $responseTime = $requestTime->copy()->addMilliseconds(500);
 
-    $idempotentRequest = new IdempotentRequest([
+    $apiLogItem = new ApiLogItem([
         'request_id' => (string) Str::uuid(),
         'request_at' => $requestTime,
         'response_at' => $responseTime,
     ]);
 
     // Assert duration is calculated correctly
-    expect($idempotentRequest->duration_ms)->toEqual($responseTime->diff($requestTime)->milliseconds)
-        ->and($idempotentRequest->getDurationFormatted())->toContain('ms');
+    expect($apiLogItem->duration_ms)->toEqual($responseTime->diff($requestTime)->milliseconds)
+        ->and($apiLogItem->getDurationFormatted())->toContain('ms');
 });
 
 test('it formats duration in seconds for longer requests', function () {
@@ -32,33 +32,33 @@ test('it formats duration in seconds for longer requests', function () {
     $requestTime = Carbon::now();
     $responseTime = $requestTime->copy()->addSeconds(2.5);
 
-    $idempotentRequest = new IdempotentRequest([
+    $apiLogItem = new ApiLogItem([
         'request_id' => (string) Str::uuid(),
         'request_at' => $requestTime,
         'response_at' => $responseTime,
     ]);
 
     // Assert duration is calculated correctly
-    expect($idempotentRequest->duration_ms)->toEqual($responseTime->diff($requestTime)->milliseconds)
-        ->and($idempotentRequest->getDurationFormatted())->toContain('s');
+    expect($apiLogItem->duration_ms)->toEqual($responseTime->diff($requestTime)->milliseconds)
+        ->and($apiLogItem->getDurationFormatted())->toContain('s');
 });
 
 test('it handles null duration when request or response times are missing', function () {
     // Create a request with missing response time
-    $idempotentRequest = new IdempotentRequest([
+    $apiLogItem = new ApiLogItem([
         'request_id' => (string) Str::uuid(),
         'request_at' => now(),
         'response_at' => null,
     ]);
 
     // Assert duration handling
-    expect($idempotentRequest->duration_ms)->toBeNull()
-        ->and($idempotentRequest->getDurationFormatted())->toBeNull();
+    expect($apiLogItem->duration_ms)->toBeNull()
+        ->and($apiLogItem->getDurationFormatted())->toBeNull();
 });
 
 test('it can associate related models through morphToMany relationship', function () {
-    // Create an idempotent request
-    $idempotentRequest = IdempotentRequest::create([
+    // Create an API log item
+    $apiLogItem = ApiLogItem::create([
         'request_id' => $this->requestId,
         'path' => 'api/test',
         'method' => 'POST',
@@ -73,7 +73,7 @@ test('it can associate related models through morphToMany relationship', functio
     $modelClass = 'Prahsys\\ApiLogs\\Tests\\Models\\TestModel';
 
     // Get the relationship
-    $relation = $idempotentRequest->getRelatedModels($modelClass);
+    $relation = $apiLogItem->getRelatedModels($modelClass);
 
     // Verify the relationship is set up correctly
     expect($relation)->toBeInstanceOf(\Illuminate\Database\Eloquent\Relations\MorphToMany::class)

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('idempotent_requests', function (Blueprint $table) {
+        Schema::create('api_log_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('request_id')->unique()->index();
             $table->string('path');
@@ -35,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('idempotent_requests');
+        Schema::dropIfExists('api_log_items');
     }
 };

@@ -4,7 +4,7 @@ namespace Prahsys\ApiLogs\Services;
 
 use Illuminate\Support\Collection;
 
-class ModelIdempotencyTracker
+class ApiLogItemTracker
 {
     /**
      * Collection of models to be associated with idempotent requests

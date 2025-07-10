@@ -6,18 +6,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
-use Prahsys\ApiLogs\Events\CompleteIdempotentRequestEvent;
-use Prahsys\ApiLogs\Services\IdempotencyService;
-use Prahsys\ApiLogs\Services\ModelIdempotencyTracker;
+use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
+use Prahsys\ApiLogs\Services\ApiLogItemService;
+use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 use Symfony\Component\HttpFoundation\Response;
 
-class IdempotencyLogMiddleware
+class ApiLogMiddleware
 {
     /**
      * Create a new middleware instance.
      */
     public function __construct(
-        protected IdempotencyService $idempotencyService
+        protected ApiLogItemService $idempotencyService
     ) {}
 
     /**
@@ -32,10 +32,22 @@ class IdempotencyLogMiddleware
             return $next($request);
         }
 
-        // Generate or use existing idempotency key
-        $idempotencyHeaderName = config('prahsys-api-logs.idempotency.header_name', 'Idempotency-Key');
-        $requestId = $request->header($idempotencyHeaderName) ?? (string) Str::uuid();
-        $request->headers->set($idempotencyHeaderName, $requestId);
+        // Generate or use existing correlation ID
+        $correlationHeaderName = config('api-logs.correlation.header_name', 'Idempotency-Key');
+        $ensureHeader = config('api-logs.correlation.ensure_header', true);
+        $requestId = $request->header($correlationHeaderName);
+
+        // If header is missing and ensure_header is false, skip logging
+        if (! $requestId && ! $ensureHeader) {
+            return $next($request);
+        }
+
+        // Auto-generate if missing and ensure_header is true
+        if (! $requestId) {
+            $requestId = (string) Str::uuid();
+        }
+
+        $request->headers->set($correlationHeaderName, $requestId);
 
         // Start building the ApiLogData
         $apiLogData = $this->startApiLogData($request, $requestId);
@@ -64,11 +76,11 @@ class IdempotencyLogMiddleware
         // Complete the ApiLogData with response data
         $this->completeApiLogData($apiLogData, $response);
 
-        // Store idempotent request record in database
-        $idempotentRequest = $this->storeIdempotentRequest($apiLogData);
+        // Store API log item record in database
+        $apiLogItem = $this->storeApiLog($apiLogData);
 
         // Get tracked models and fire event with ApiLogData
-        $this->fireCompleteEvent($apiLogData, $idempotentRequest);
+        $this->fireCompleteEvent($apiLogData, $apiLogItem);
     }
 
     /**
@@ -101,7 +113,7 @@ class IdempotencyLogMiddleware
     /**
      * Complete the ApiLogData with response data.
      */
-    protected function completeApiLogData(ApiLogData $apiLogData, Response $response): void
+    public function completeApiLogData(ApiLogData $apiLogData, Response $response): void
     {
         $apiLogData->statusCode = $response->getStatusCode();
         $apiLogData->success = $response->getStatusCode() < 400;
@@ -113,9 +125,9 @@ class IdempotencyLogMiddleware
     }
 
     /**
-     * Store idempotent request record in database.
+     * Store API log item record in database.
      */
-    protected function storeIdempotentRequest(ApiLogData $apiLogData): mixed
+    public function storeApiLog(ApiLogData $apiLogData): mixed
     {
         try {
             $logData = [
@@ -129,9 +141,9 @@ class IdempotencyLogMiddleware
                 'is_error' => ! $apiLogData->success,
             ];
 
-            return $this->idempotencyService->storeIdempotentRequest($logData);
+            return $this->idempotencyService->storeApiLogItem($logData);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to store idempotent request: '.$e->getMessage(), [
+            \Illuminate\Support\Facades\Log::error('Failed to store API log item: '.$e->getMessage(), [
                 'exception' => $e,
                 'request_id' => $apiLogData->id,
             ]);
@@ -143,20 +155,20 @@ class IdempotencyLogMiddleware
     /**
      * Fire the CompleteIdempotentRequestEvent with tracked models and ApiLogData.
      */
-    protected function fireCompleteEvent(ApiLogData $apiLogData, $idempotentRequest): void
+    public function fireCompleteEvent(ApiLogData $apiLogData, $apiLogItem): void
     {
-        if (! $idempotentRequest) {
+        if (! $apiLogItem) {
             return;
         }
 
         // Get tracked models
-        $tracker = app(ModelIdempotencyTracker::class);
+        $tracker = app(ApiLogItemTracker::class);
         $models = $tracker->getModelsForRequest($apiLogData->id);
 
         // Fire event with ApiLogData
-        CompleteIdempotentRequestEvent::dispatch(
+        CompleteApiLogItemEvent::dispatch(
             $apiLogData->id,
-            $idempotentRequest->id,
+            $apiLogItem->id,
             $models->toArray(),
             $apiLogData
         );
@@ -171,7 +183,7 @@ class IdempotencyLogMiddleware
     protected function shouldLogRequest(Request $request): bool
     {
         // Check if API logging is enabled
-        if (! config('prahsys-api-logs.enabled', true)) {
+        if (! config('api-logs.enabled', true)) {
             return false;
         }
 
@@ -181,7 +193,7 @@ class IdempotencyLogMiddleware
         }
 
         // Check if the path should be excluded
-        $excludePaths = config('prahsys-api-logs.exclude_paths', []);
+        $excludePaths = config('api-logs.exclude_paths', []);
         $path = $request->path();
 
         foreach ($excludePaths as $excludePath) {
