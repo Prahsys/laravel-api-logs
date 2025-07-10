@@ -44,7 +44,6 @@ class ApiLogPipelineManager
     {
         foreach ($this->channels as $channelName => $redactors) {
             $processedData = $this->processData($data->toArray(), $redactors);
-
             Log::channel($channelName)->info($data->method.' '.$data->url, $processedData);
         }
     }
