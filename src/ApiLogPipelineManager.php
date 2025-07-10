@@ -2,9 +2,9 @@
 
 namespace Prahsys\ApiLogs;
 
-use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Log;
 use Prahsys\ApiLogs\Data\ApiLogData;
+use Prahsys\ApiLogs\Processors\ApiLogProcessor;
 
 class ApiLogPipelineManager
 {
@@ -38,54 +38,26 @@ class ApiLogPipelineManager
     }
 
     /**
-     * Process and log an ApiLogData through all configured channels.
+     * Register processors on log channels.
      */
-    public function processAndLog(ApiLogData $data): void
+    public function registerProcessors(): void
     {
         foreach ($this->channels as $channelName => $redactors) {
-            $processedData = $this->processData($data->toArray(), $redactors);
-            Log::channel($channelName)->info($data->method.' '.$data->url, $processedData);
+            $processor = new ApiLogProcessor($redactors);
+            Log::channel($channelName)->getLogger()->pushProcessor($processor);
         }
     }
 
     /**
-     * Process data through a pipeline of redactors.
+     * Log an ApiLogData through all configured channels.
      */
-    protected function processData(array $data, array $redactorConfigs): array
+    public function log(ApiLogData $data): void
     {
-        $redactors = $this->resolveRedactors($redactorConfigs);
+        $context = $data->toArray();
 
-        return app(Pipeline::class)
-            ->send($data)
-            ->through($redactors)
-            ->thenReturn();
-    }
-
-    /**
-     * Resolve redactor configurations into instances.
-     */
-    protected function resolveRedactors(array $redactorConfigs): array
-    {
-        return array_map(function ($config) {
-            if (is_string($config)) {
-                // Simple class name - need to instantiate with default args
-                return new $config;
-            }
-
-            if (is_array($config)) {
-                // [class, ...args] format
-                $class = array_shift($config);
-
-                return new $class(...$config);
-            }
-
-            if (is_object($config)) {
-                // Already instantiated
-                return $config;
-            }
-
-            throw new \InvalidArgumentException('Invalid redactor configuration');
-        }, $redactorConfigs);
+        foreach ($this->channels as $channelName => $redactors) {
+            Log::channel($channelName)->info($data->method.' '.$data->url, $context);
+        }
     }
 
     /**

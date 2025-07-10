@@ -88,3 +88,119 @@ it('ignores missing paths', function () {
 
     expect($result['request']['body'])->toBe(['username' => 'john']);
 });
+
+it('redacts with deep wildcard at any level', function () {
+    $redactor = new DotNotationRedactor(['**.card.number'], '[REDACTED]');
+
+    $data = [
+        'response' => [
+            'body' => [
+                'data' => [
+                    'transactions' => [
+                        [
+                            'payment' => [
+                                'billing' => [
+                                    'card' => [
+                                        'number' => '4111111111111111',
+                                        'expiry' => [
+                                            'month' => 12,
+                                            'year' => 25,
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                        [
+                            'payment' => [
+                                'billing' => [
+                                    'card' => [
+                                        'number' => '5555555555554444',
+                                        'expiry' => [
+                                            'month' => 1,
+                                            'year' => 26,
+                                        ],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $result = $redactor->handle($data, fn ($data) => $data);
+
+    expect($result['response']['body']['data']['transactions'][0]['payment']['billing']['card']['number'])
+        ->toBe('[REDACTED]');
+    expect($result['response']['body']['data']['transactions'][1]['payment']['billing']['card']['number'])
+        ->toBe('[REDACTED]');
+
+    // Should not redact expiry
+    expect($result['response']['body']['data']['transactions'][0]['payment']['billing']['card']['expiry']['month'])
+        ->toBe(12);
+});
+
+it('redacts multiple deep wildcard paths', function () {
+    $redactor = new DotNotationRedactor(['**.card.number', '**.card.expiry'], '[REDACTED]');
+
+    $data = [
+        'level1' => [
+            'level2' => [
+                'card' => [
+                    'number' => '4111111111111111',
+                    'expiry' => ['month' => 12, 'year' => 25],
+                ],
+            ],
+        ],
+        'other' => [
+            'nested' => [
+                'deep' => [
+                    'card' => [
+                        'number' => '5555555555554444',
+                        'expiry' => ['month' => 1, 'year' => 26],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $result = $redactor->handle($data, fn ($data) => $data);
+
+    expect($result['level1']['level2']['card']['number'])->toBe('[REDACTED]');
+    expect($result['level1']['level2']['card']['expiry'])->toBe('[REDACTED]');
+    expect($result['other']['nested']['deep']['card']['number'])->toBe('[REDACTED]');
+    expect($result['other']['nested']['deep']['card']['expiry'])->toBe('[REDACTED]');
+});
+
+it('works with single wildcard and deep wildcard together', function () {
+    $redactor = new DotNotationRedactor(['transactions.*.payment.billing.card.number', '**.card.cvv'], '[REDACTED]');
+
+    $data = [
+        'transactions' => [
+            [
+                'payment' => [
+                    'billing' => [
+                        'card' => [
+                            'number' => '4111111111111111',
+                            'cvv' => '123',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        'deep' => [
+            'nested' => [
+                'card' => [
+                    'cvv' => '456',
+                ],
+            ],
+        ],
+    ];
+
+    $result = $redactor->handle($data, fn ($data) => $data);
+
+    expect($result['transactions'][0]['payment']['billing']['card']['number'])->toBe('[REDACTED]');
+    expect($result['transactions'][0]['payment']['billing']['card']['cvv'])->toBe('[REDACTED]');
+    expect($result['deep']['nested']['card']['cvv'])->toBe('[REDACTED]');
+});

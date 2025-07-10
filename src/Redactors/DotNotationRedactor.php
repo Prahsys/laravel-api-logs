@@ -54,9 +54,15 @@ class DotNotationRedactor implements RedactorInterface
     protected function redactWildcardPath(array $data, string $path): array
     {
         $result = $data;
-        $pathParts = explode('.', $path);
 
-        $this->redactWildcardRecursive($result, $pathParts, []);
+        // Handle deep wildcard (**) patterns
+        if (str_contains($path, '**')) {
+            $this->redactDeepWildcardPath($result, $path);
+        } else {
+            // Handle regular wildcard (*) patterns
+            $pathParts = explode('.', $path);
+            $this->redactWildcardRecursive($result, $pathParts, []);
+        }
 
         return $result;
     }
@@ -70,7 +76,7 @@ class DotNotationRedactor implements RedactorInterface
         $part = array_shift($pathParts);
 
         if ($part === '*') {
-            // Get the current data level to iterate over
+            // Single level wildcard
             $currentData = data_get($data, implode('.', $currentPath));
             if (! is_array($currentData)) {
                 return;
@@ -106,6 +112,72 @@ class DotNotationRedactor implements RedactorInterface
                 $this->redactWildcardRecursive($data, $pathParts, $newPath);
             }
         }
+    }
+
+    /**
+     * Handle deep wildcard (**) patterns.
+     */
+    protected function redactDeepWildcardPath(array &$data, string $path): void
+    {
+        // Split path by ** to get prefix and suffix
+        $parts = explode('**', $path, 2);
+        $prefix = trim($parts[0], '.');
+        $suffix = isset($parts[1]) ? trim($parts[1], '.') : '';
+
+        // Find all paths that match the pattern
+        $matchingPaths = $this->findDeepWildcardPaths($data, $prefix, $suffix);
+
+        // Redact each matching path
+        foreach ($matchingPaths as $matchingPath) {
+            $value = data_get($data, $matchingPath);
+            if ($value !== null) {
+                $redactedValue = $this->getReplacementValue($value, $matchingPath, $data);
+                data_set($data, $matchingPath, $redactedValue);
+            }
+        }
+    }
+
+    /**
+     * Find all paths that match a deep wildcard pattern.
+     */
+    protected function findDeepWildcardPaths(array $data, string $prefix, string $suffix, string $currentPath = ''): array
+    {
+        $paths = [];
+
+        foreach ($data as $key => $value) {
+            $fullPath = $currentPath ? "$currentPath.$key" : $key;
+
+            // Check if this path matches our pattern
+            if ($this->pathMatches($fullPath, $prefix, $suffix)) {
+                $paths[] = $fullPath;
+            }
+
+            // Recurse into arrays
+            if (is_array($value)) {
+                $paths = array_merge($paths, $this->findDeepWildcardPaths($value, $prefix, $suffix, $fullPath));
+            }
+        }
+
+        return $paths;
+    }
+
+    /**
+     * Check if a path matches the prefix and suffix pattern.
+     */
+    protected function pathMatches(string $path, string $prefix, string $suffix): bool
+    {
+        // If no prefix, path should end with suffix
+        if (empty($prefix)) {
+            return empty($suffix) || str_ends_with($path, $suffix);
+        }
+
+        // If no suffix, path should start with prefix
+        if (empty($suffix)) {
+            return str_starts_with($path, $prefix);
+        }
+
+        // Path should start with prefix and end with suffix
+        return str_starts_with($path, $prefix) && str_ends_with($path, $suffix);
     }
 
     /**

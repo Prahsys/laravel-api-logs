@@ -77,7 +77,7 @@ class IdempotencyLogMiddleware
     protected function startApiLogData(Request $request, string $requestId): ApiLogData
     {
         $requestData = [
-            'headers' =>  array_map(fn($values) => implode(PHP_EOL, $values), $request->headers->all()),
+            'headers' => array_map(fn ($values) => implode(PHP_EOL, $values), $request->headers->all()),
             'body' => $request->all() ?: [],
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
@@ -106,7 +106,7 @@ class IdempotencyLogMiddleware
         $apiLogData->statusCode = $response->getStatusCode();
         $apiLogData->success = $response->getStatusCode() < 400;
         $apiLogData->response = [
-            'headers' => array_map(fn($values) => implode(PHP_EOL, $values), $response->headers->all()),
+            'headers' => array_map(fn ($values) => implode(PHP_EOL, $values), $response->headers->all()),
             'body' => $this->getResponseBody($response),
             'timestamp' => now()->toIso8601String(),
         ];

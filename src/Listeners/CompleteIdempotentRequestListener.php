@@ -56,13 +56,13 @@ class CompleteIdempotentRequestListener implements ShouldQueue
             }
         }
 
-        // Process API log data through configured pipelines
+        // Log API log data through configured pipelines
         if ($event->apiLogData) {
             try {
                 $pipelineManager = app(ApiLogPipelineManager::class);
-                $pipelineManager->processAndLog($event->apiLogData);
+                $pipelineManager->log($event->apiLogData);
             } catch (\Exception $e) {
-                Log::error('Error processing API log data through pipelines: '.$e->getMessage(), [
+                Log::error('Error logging API log data through pipelines: '.$e->getMessage(), [
                     'request_id' => $event->requestId,
                     'exception' => $e,
                 ]);
