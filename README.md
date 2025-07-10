@@ -10,7 +10,7 @@ A comprehensive Laravel package for logging API requests and responses with idem
 - **Model Tracking**: Automatic association of created/updated models with API requests
 - **Async Processing**: Event-driven architecture with queue support
 - **Multiple Channels**: Support for raw and redacted logging channels
-- **Compliance Ready**: Built-in support for common PCI DSS and SOC 2 fields
+- **Compliance Ready**: Built-in redaction support useful for PCI DSS, SOC 2, and other compliance requirements
 
 ## Architecture Overview
 
@@ -197,7 +197,7 @@ Configure outbound logging in your environment:
 API_LOGS_OUTBOUND_ENABLED=true
 ```
 
-Or in `config/prahsys-api-logs.php`:
+Or in `config/api-logs.php`:
 
 ```php
 'outbound' => [
@@ -269,7 +269,7 @@ foreach ($allAffectedModels as $model) {
 
 ### Channel Configuration
 
-Configure different redaction pipelines for different channels in `config/prahsys-api-logs.php`. Each channel can have its own redaction strategy based on the destination's requirements:
+Configure different redaction pipelines for different channels in `config/api-logs.php`. Each channel can have its own redaction strategy based on the destination's requirements:
 
 ```php
 'channels' => [
@@ -576,7 +576,7 @@ class SmartRedactor extends DotNotationRedactor
 Once created, use your custom redactors in your channel configuration:
 
 ```php
-// config/prahsys-api-logs.php
+// config/api-logs.php
 'channels' => [
     'api_logs_pci_compliant' => [
         \App\Redactors\PciRedactor::class,
@@ -619,19 +619,21 @@ The event contains:
 
 ## Compliance Features
 
-### PCI DSS Compliance
+This package provides features that are generally useful for compliance requirements:
 
-- **Requirement 10.2 & 10.3**: Comprehensive audit trails with detailed metadata
-- **Requirement 3.4**: Data isolation through redaction system
-- **Requirement 10.3.4**: Transaction traceability via idempotency keys
-- **Requirement 10.5**: Protected logging channels with access controls
+### PCI DSS Support
 
-### SOC 2 Compliance
+- Comprehensive audit trails with detailed metadata
+- Data isolation through configurable redaction system
+- Transaction traceability via correlation IDs
+- Protected logging channels with access controls
 
-- **CC5.2**: Audit-ready logging for security events
-- **CC3.1**: Clear system boundaries through redaction
-- **CC7.2**: Consistent logging format for anomaly detection
-- **P1.1**: Data protection through configurable redaction
+### SOC 2 Support
+
+- Audit-ready logging for security events
+- Clear system boundaries through redaction
+- Consistent logging format for monitoring
+- Data protection through configurable redaction
 
 ## External Service Integration
 
@@ -686,24 +688,6 @@ class AxiomLogger
 - **Splunk**: Set up with compliance-specific redaction pipelines
 - **Elasticsearch**: Use stack channels for search and analytics
 
-### Alert Configuration
-
-Configure different alert thresholds per channel:
-
-```php
-// Example: Route errors to Sentry, success metrics to Axiom
-'channels' => [
-    'api_logs_alerts' => [
-        'driver' => 'stack',
-        'channels' => ['api_logs_sentry'], // Only errors
-    ],
-    
-    'api_logs_metrics' => [
-        'driver' => 'stack', 
-        'channels' => ['api_logs_axiom'], // All requests for analytics
-    ],
-],
-```
 
 ## Database Pruning and Log Management
 
@@ -838,7 +822,7 @@ Configure retention policies based on your compliance requirements:
 'api_logs_compliance' => [
     'driver' => 'daily',
     'path' => storage_path('logs/compliance/api_logs.log'),
-    'days' => 2555, // 7 years for financial data
+    'days' => 2555, // Extended retention as needed
     'permission' => 0600,
 ],
 ```
