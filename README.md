@@ -33,7 +33,7 @@ HTTP Request → Middleware → Event → Listener → Pipeline → Log Channels
 
 The actual request/response data is processed through configurable log channels where it can be:
 - Stored in log files with native Laravel rotation
-- Sent to external services (Axiom, Sentry, etc.) 
+- Sent to external services (Axiom, Sentry, etc.)
 - Redacted according to compliance requirements
 - Retained for different periods per channel
 

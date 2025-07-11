@@ -51,7 +51,7 @@ class ApiLogMiddleware
 
         // Start building the ApiLogData
         $apiLogData = $this->startApiLogData($request, $requestId);
-        $request->attributes->set('api_log_data', $apiLogData);
+        $request->attributes->set('apiLogData', $apiLogData);
 
         // Process the request
         $response = $next($request);
@@ -68,7 +68,7 @@ class ApiLogMiddleware
             return;
         }
 
-        $apiLogData = $request->attributes->get('api_log_data');
+        $apiLogData = $request->attributes->get('apiLogData');
         if (! $apiLogData) {
             return;
         }

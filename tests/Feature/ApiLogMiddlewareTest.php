@@ -42,9 +42,9 @@ test('middleware handles request and logs data correctly', function () {
     expect($request->header('Idempotency-Key'))->toBe($this->idempotencyKey);
 
     // Check that the ApiLogData was stored in the request attributes
-    expect($request->attributes->has('api_log_data'))->toBeTrue();
+    expect($request->attributes->has('apiLogData'))->toBeTrue();
 
-    $apiLogData = $request->attributes->get('api_log_data');
+    $apiLogData = $request->attributes->get('apiLogData');
     expect($apiLogData)->toBeInstanceOf(ApiLogData::class)
         ->and($apiLogData->id)->toBe($this->idempotencyKey)
         ->and($apiLogData->method)->toBe('POST')

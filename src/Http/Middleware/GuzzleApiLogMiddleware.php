@@ -318,7 +318,7 @@ class GuzzleApiLogMiddleware
 
                 // Check if we have api_log_data set by the ApiLogMiddleware
                 if ($laravelRequest && $laravelRequest->attributes) {
-                    $apiLogData = $laravelRequest->attributes->get('api_log_data');
+                    $apiLogData = $laravelRequest->attributes->get('apiLogData');
                     if ($apiLogData && isset($apiLogData->id)) {
                         return $apiLogData->id;
                     }
