@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
 use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
+use Prahsys\ApiLogs\Models\ApiLogItem;
 use Prahsys\ApiLogs\Services\ApiLogItemService;
 use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 use Symfony\Component\HttpFoundation\Response;
@@ -44,7 +45,7 @@ class ApiLogMiddleware
 
         // Auto-generate if missing and ensure_header is true
         if (! $requestId) {
-            $requestId = (string) Str::uuid();
+            $requestId = (string) Str::orderedUuid();
         }
 
         $request->headers->set($correlationHeaderName, $requestId);

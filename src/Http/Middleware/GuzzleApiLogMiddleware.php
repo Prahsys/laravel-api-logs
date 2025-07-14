@@ -43,7 +43,7 @@ class GuzzleApiLogMiddleware
 
             // Auto-generate if missing and ensure_header is true
             if (! $requestId) {
-                $requestId = (string) Str::uuid();
+                $requestId = (string) Str::orderedUuid();
                 $request = $request->withHeader($correlationHeaderName, $requestId);
             }
 
