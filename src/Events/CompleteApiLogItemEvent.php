@@ -6,6 +6,7 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Prahsys\ApiLogs\Data\ApiLogData;
+use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 
 class CompleteApiLogItemEvent
 {
@@ -16,13 +17,13 @@ class CompleteApiLogItemEvent
      *
      * @param  string  $requestId  The correlation key/request ID
      * @param  string  $apiLogItemId  The ID of the ApiLogItem model
-     * @param  array  $models  Array of models to associate with the API log item
+     * @param  ApiLogItemTracker  $tracker  The tracker instance with all models for this request
      * @param  ApiLogData|null  $apiLogData  The API log data to process through pipelines
      */
     public function __construct(
         public string $requestId,
         public string $apiLogItemId,
-        public array $models,
+        public ApiLogItemTracker $tracker,
         public ?ApiLogData $apiLogData = null
     ) {}
 }

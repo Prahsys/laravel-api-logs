@@ -34,7 +34,7 @@ beforeEach(function () {
 
 it('processes full pipeline and redacts sensitive data', function () {
     // Create a fresh manager to test functionality
-    $manager = new ApiLogPipelineManager();
+    $manager = new ApiLogPipelineManager;
     $manager->addChannel('test_redacted', [
         CommonHeaderFieldsRedactor::class,
         CommonBodyFieldsRedactor::class,
@@ -85,7 +85,7 @@ it('processes full pipeline and redacts sensitive data', function () {
 
 it('preserves all data in raw pipeline', function () {
     // Create a fresh manager to test functionality
-    $manager = new ApiLogPipelineManager();
+    $manager = new ApiLogPipelineManager;
     $manager->addChannel('test_raw', []); // No redactors
 
     // Test that channels are properly configured

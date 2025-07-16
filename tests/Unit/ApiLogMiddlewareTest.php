@@ -246,10 +246,6 @@ test('fireCompleteEvent fires event with tracked models and ApiLogData', functio
         ->with($this->requestId)
         ->andReturn($mockModels);
 
-    $mockTracker->shouldReceive('clearRequest')
-        ->once()
-        ->with($this->requestId);
-
     // Mock the app() call to return our mock tracker
     $this->app->instance(ApiLogItemTracker::class, $mockTracker);
 
@@ -264,7 +260,7 @@ test('fireCompleteEvent fires event with tracked models and ApiLogData', functio
     Event::assertDispatched(CompleteApiLogItemEvent::class, function ($event) use ($apiLogData) {
         return $event->requestId === $this->requestId
             && $event->apiLogItemId === 'idempotent-request-id'
-            && count($event->models) === 2
+            && $event->tracker->getModelsForRequest($this->requestId)->count() === 2
             && $event->apiLogData === $apiLogData;
     });
 });
