@@ -59,4 +59,12 @@ class ApiLogItemTracker
             unset($this->modelsByRequest[$requestId]);
         }
     }
+
+    /**
+     * Clear all tracked models for all requests
+     */
+    public function clearAll(): void
+    {
+        $this->modelsByRequest = [];
+    }
 }

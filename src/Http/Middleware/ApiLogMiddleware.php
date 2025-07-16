@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
 use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
-use Prahsys\ApiLogs\Models\ApiLogItem;
 use Prahsys\ApiLogs\Services\ApiLogItemService;
 use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 use Symfony\Component\HttpFoundation\Response;
@@ -154,7 +153,7 @@ class ApiLogMiddleware
     }
 
     /**
-     * Fire the CompleteIdempotentRequestEvent with tracked models and ApiLogData.
+     * Fire the CompleteApiLogItemEvent with tracker instance and ApiLogData.
      */
     public function fireCompleteEvent(ApiLogData $apiLogData, $apiLogItem): void
     {
@@ -162,20 +161,18 @@ class ApiLogMiddleware
             return;
         }
 
-        // Get tracked models
+        // Get the tracker instance with all tracked models for this request
         $tracker = app(ApiLogItemTracker::class);
-        $models = $tracker->getModelsForRequest($apiLogData->id);
 
-        // Fire event with ApiLogData
+        // Fire event with ApiLogData and tracker instance
         CompleteApiLogItemEvent::dispatch(
             $apiLogData->id,
             $apiLogItem->id,
-            $models->toArray(),
+            $tracker, // Pass the tracker instance instead of models array
             $apiLogData
         );
 
-        // Clear the tracker for this request ID
-        $tracker->clearRequest($apiLogData->id);
+        // Don't clear the tracker here - let the event listener handle it
     }
 
     /**

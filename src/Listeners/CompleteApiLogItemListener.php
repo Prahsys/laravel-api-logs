@@ -28,33 +28,68 @@ class CompleteApiLogItemListener implements ShouldQueue
             return;
         }
 
-        // Process each model in the array
-        foreach ($event->models as $modelData) {
-            try {
+        // Collect all models for bulk insert
+        $modelsByClass = [];
+        $requestIds = $event->tracker->getRequestIds();
+
+        foreach ($requestIds as $requestId) {
+            $models = $event->tracker->getModelsForRequest($requestId);
+
+            foreach ($models as $modelData) {
                 $modelClass = $modelData['model_class'];
                 $modelId = $modelData['model_id'];
 
-                // Find the model
-                $model = $modelClass::find($modelId);
+                if (! isset($modelsByClass[$modelClass])) {
+                    $modelsByClass[$modelClass] = [];
+                }
 
-                if (! $model) {
-                    Log::warning("Model {$modelClass} with ID {$modelId} not found");
+                // Add to collection, avoiding duplicates
+                if (! in_array($modelId, $modelsByClass[$modelClass])) {
+                    $modelsByClass[$modelClass][] = $modelId;
+                }
+            }
+        }
+
+        // Bulk insert for each model class
+        foreach ($modelsByClass as $modelClass => $modelIds) {
+            try {
+                // Verify models exist before attaching
+                $existingIds = $modelClass::whereIn('id', $modelIds)->pluck('id')->toArray();
+
+                if (empty($existingIds)) {
+                    Log::warning("No models found for {$modelClass} with IDs: ".implode(', ', $modelIds));
 
                     continue;
                 }
 
-                // Associate the model with the API log item
-                $apiLogItem->getRelatedModels($modelClass)->attach($modelId);
+                // Log missing models
+                $missingIds = array_diff($modelIds, $existingIds);
+                if (! empty($missingIds)) {
+                    Log::warning("Models not found for {$modelClass} with IDs: ".implode(', ', $missingIds));
+                }
 
-                Log::info("Associated {$modelClass} #{$modelId} with API log item {$event->requestId}");
+                // Bulk attach existing models
+                if (! empty($existingIds)) {
+                    $apiLogItem->getRelatedModels($modelClass)->attach($existingIds);
+                    Log::info("Bulk associated {$modelClass} models with API log item {$event->requestId}", [
+                        'model_class' => $modelClass,
+                        'model_ids' => $existingIds,
+                        'count' => count($existingIds),
+                    ]);
+                }
+
             } catch (\Exception $e) {
-                Log::error('Error associating model with API log item: '.$e->getMessage(), [
+                Log::error('Error bulk associating models with API log item: '.$e->getMessage(), [
                     'request_id' => $event->requestId,
-                    'model_data' => $modelData,
+                    'model_class' => $modelClass,
+                    'model_ids' => $modelIds,
                     'exception' => $e,
                 ]);
             }
         }
+
+        // Clear the tracker after processing all requests
+        $event->tracker->clearAll();
 
         // Log API log data through configured pipelines
         if ($event->apiLogData) {
