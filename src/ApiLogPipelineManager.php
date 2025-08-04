@@ -44,7 +44,7 @@ class ApiLogPipelineManager
     {
         foreach ($this->channels as $channelName => $redactors) {
             $processor = new ApiLogProcessor($redactors);
-            Log::channel($channelName)->getLogger()->pushProcessor($processor);
+            Log::channel($channelName)?->getLogger()->pushProcessor($processor);
         }
     }
 
@@ -56,7 +56,7 @@ class ApiLogPipelineManager
         $context = $data->toArray();
 
         foreach ($this->channels as $channelName => $redactors) {
-            Log::channel($channelName)->info($data->method.' '.$data->url, $context);
+            Log::channel($channelName)?->info($data->method.' '.$data->url, $context);
         }
     }
 
