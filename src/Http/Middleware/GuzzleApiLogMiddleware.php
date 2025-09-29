@@ -5,7 +5,9 @@ namespace Prahsys\ApiLogs\Http\Middleware;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
+use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
 use Prahsys\ApiLogs\Services\ApiLogItemService;
+use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -54,10 +56,8 @@ class GuzzleApiLogMiddleware
                     // Complete the ApiLogData with response data
                     $this->completeApiLogData($apiLogData, $response);
 
-                    // Store API log item record in database
-                    $apiLogItem = $this->storeApiLog($apiLogData);
-
-                    // Don't fire event for outbound calls - only the main ApiLogMiddleware should fire it
+                    // Defer storage to after response is sent
+                    $this->deferLogStorage($apiLogData);
 
                     return $response;
                 },
@@ -65,10 +65,8 @@ class GuzzleApiLogMiddleware
                     // Handle request/response errors
                     $this->completeApiLogDataWithError($apiLogData, $reason);
 
-                    // Store API log item record in database
-                    $apiLogItem = $this->storeApiLog($apiLogData);
-
-                    // Don't fire event for outbound calls - only the main ApiLogMiddleware should fire it
+                    // Defer storage to after response is sent
+                    $this->deferLogStorage($apiLogData);
 
                     throw $reason;
                 }
@@ -155,6 +153,24 @@ class GuzzleApiLogMiddleware
     }
 
     /**
+     * Defer log storage to after the response is sent.
+     */
+    protected function deferLogStorage(ApiLogData $apiLogData): void
+    {
+        // Use Laravel's terminating callback to defer database writes
+        if (app()->bound('request')) {
+            app()->terminating(function () use ($apiLogData) {
+                $apiLogItem = $this->storeApiLog($apiLogData);
+                $this->fireCompleteEvent($apiLogData, $apiLogItem);
+            });
+        } else {
+            // Fallback for CLI/non-HTTP contexts - store immediately
+            $apiLogItem = $this->storeApiLog($apiLogData);
+            $this->fireCompleteEvent($apiLogData, $apiLogItem);
+        }
+    }
+
+    /**
      * Store API log item record in database.
      */
     protected function storeApiLog(ApiLogData $apiLogData): mixed
@@ -180,6 +196,32 @@ class GuzzleApiLogMiddleware
 
             return null;
         }
+    }
+
+    /**
+     * Fire the CompleteApiLogItemEvent with tracked models and ApiLogData.
+     */
+    protected function fireCompleteEvent(ApiLogData $apiLogData, $apiLogItem): void
+    {
+        if (! $apiLogItem) {
+            return;
+        }
+
+        // For outbound calls, we typically don't track models in the same way,
+        // but we still fire the event for consistency and extensibility
+        $tracker = app(ApiLogItemTracker::class);
+        $models = $tracker->getModelsForRequest($apiLogData->id);
+
+        // Fire event with ApiLogData
+        CompleteApiLogItemEvent::dispatch(
+            $apiLogData->id,
+            $apiLogItem->id,
+            $models->toArray(),
+            $apiLogData
+        );
+
+        // Clear the tracker for this request ID
+        $tracker->clearRequest($apiLogData->id);
     }
 
     /**
