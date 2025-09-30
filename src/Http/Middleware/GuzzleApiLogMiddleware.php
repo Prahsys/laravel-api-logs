@@ -210,18 +210,14 @@ class GuzzleApiLogMiddleware
         // For outbound calls, we typically don't track models in the same way,
         // but we still fire the event for consistency and extensibility
         $tracker = app(ApiLogItemTracker::class);
-        $models = $tracker->getModelsForRequest($apiLogData->id);
 
         // Fire event with ApiLogData
         CompleteApiLogItemEvent::dispatch(
             $apiLogData->id,
             $apiLogItem->id,
-            $models->toArray(),
+            $tracker,
             $apiLogData
         );
-
-        // Clear the tracker for this request ID
-        $tracker->clearRequest($apiLogData->id);
     }
 
     /**
