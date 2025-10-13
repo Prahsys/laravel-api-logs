@@ -54,7 +54,7 @@ class CompleteApiLogItemListener implements ShouldQueue
         foreach ($modelsByClass as $modelClass => $modelIds) {
             try {
                 // Verify models exist before attaching
-                $existingIds = $modelClass::whereIn('id', $modelIds)->pluck('id')->toArray();
+                $existingIds = $modelClass::whereIn($modelClass::make()->getKeyName(), $modelIds)->pluck($modelClass::make()->getKeyName())->toArray();
 
                 if (empty($existingIds)) {
                     Log::warning("No models found for {$modelClass} with IDs: ".implode(', ', $modelIds));
