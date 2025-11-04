@@ -6,6 +6,7 @@ use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Support\Str;
 use Prahsys\ApiLogs\Data\ApiLogData;
 use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
+use Prahsys\ApiLogs\Services\ApiLogCollector;
 use Prahsys\ApiLogs\Services\ApiLogItemService;
 use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 use Psr\Http\Message\RequestInterface;
@@ -17,7 +18,8 @@ class GuzzleApiLogMiddleware
      * Create a new middleware instance.
      */
     public function __construct(
-        protected ApiLogItemService $apiLogItemService
+        protected ApiLogItemService $apiLogItemService,
+        protected ApiLogCollector $apiLogCollector
     ) {}
 
     /**
@@ -157,12 +159,10 @@ class GuzzleApiLogMiddleware
      */
     protected function deferLogStorage(ApiLogData $apiLogData): void
     {
-        // Use Laravel's terminating callback to defer database writes
+        // Use the collector to batch all API logs together
         if (app()->bound('request')) {
-            app()->terminating(function () use ($apiLogData) {
-                $apiLogItem = $this->storeApiLog($apiLogData);
-                $this->fireCompleteEvent($apiLogData, $apiLogItem);
-            });
+            // Add to collector - it will register a terminating callback once
+            $this->apiLogCollector->add($apiLogData);
         } else {
             // Fallback for CLI/non-HTTP contexts - store immediately
             $apiLogItem = $this->storeApiLog($apiLogData);
