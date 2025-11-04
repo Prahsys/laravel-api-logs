@@ -9,6 +9,7 @@ use Prahsys\ApiLogs\Events\CompleteApiLogItemEvent;
 use Prahsys\ApiLogs\Http\Middleware\ApiLogMiddleware;
 use Prahsys\ApiLogs\Http\Middleware\GuzzleApiLogMiddleware;
 use Prahsys\ApiLogs\Listeners\CompleteApiLogItemListener;
+use Prahsys\ApiLogs\Services\ApiLogCollector;
 use Prahsys\ApiLogs\Services\ApiLogItemTracker;
 
 class ApiLogsServiceProvider extends ServiceProvider
@@ -58,6 +59,7 @@ class ApiLogsServiceProvider extends ServiceProvider
 
         // Register services
         $this->app->singleton(ApiLogItemTracker::class);
+        $this->app->singleton(ApiLogCollector::class);
 
         // Register the configured ApiLogData class
         $dataClass = config('api-logs.data.api_log_data', ApiLogData::class);
