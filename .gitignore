@@ -3,6 +3,6 @@
 /.phpunit.cache/
 /.idea/
 /.vscode/
-/.DS_Store
+.DS_Store
 .phpunit.result.cache
 composer.lock
